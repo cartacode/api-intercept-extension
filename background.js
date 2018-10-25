@@ -1,3 +1,11 @@
+var videoUrls = '';
+
+chrome.storage.sync.get("tidal_video", function(obj) {
+	if (obj && obj.tidal_video) {
+		videoUrls = obj.tidal_video;
+	}
+});
+
 chrome.runtime.onInstalled.addListener(function() {
   chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
     chrome.declarativeContent.onPageChanged.addRules([{
@@ -50,7 +58,7 @@ function coreGetApi(url) {
     const tabStorage = {};
     const networkFilters = {
         urls: [
-        	"*://*.video.tidal.com/*"
+        	"*://developer.chrome.com/*"
         ]
     };
 
@@ -66,7 +74,6 @@ function coreGetApi(url) {
             startTime: details.timeStamp,
             status: 'pending'
         };
-        // console.log(tabStorage[tabId].requests[requestId]);
     }, networkFilters);
 
     chrome.webRequest.onCompleted.addListener((details) => {
@@ -82,13 +89,23 @@ function coreGetApi(url) {
             requestDuration: details.timeStamp - request.startTime,
             status: 'complete'
         });
-
-        if (
-        	tabStorage[tabId].requests[details.requestId].url.indexOf('master_all.m3u') > -1
-        	&& tabStorage[tabId].requests[details.requestId].status == "complete"
-        ) {
-        	console.log(tabStorage[tabId].requests[details.requestId]);
+        console.log('complete: ', request, videoUrls)
+        if (videoUrls.indexOf(request.url) !== -1) {
+        	if (videoUrls === '') {
+        		videoUrls = request.url
+        	} else {
+        		videoUrls += ',' + request.url;
+        	}
         }
+        
+        chrome.storage.sync.set({ "tidal_video": videoUrls }, function() {
+		});
+        // if (
+        // 	tabStorage[tabId].requests[details.requestId].url.indexOf('master_all.m3u') > -1
+        // 	&& tabStorage[tabId].requests[details.requestId].status == "complete"
+        // ) {
+        // 	console.log(tabStorage[tabId].requests[details.requestId]);
+        // }
         
 
     }, networkFilters);
@@ -104,7 +121,6 @@ function coreGetApi(url) {
             endTime: details.timeStamp,           
             status: 'error',
         });
-        console.log(tabStorage[tabId].requests[requestId]);
     }, networkFilters);
 
     chrome.tabs.onActivated.addListener((tab) => {
