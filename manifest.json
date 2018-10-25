@@ -1,18 +1,22 @@
 {
-  "name": "One Sream Player",
-  "description": "Chrome Extension for One stream player",
-  "version": "1.0",
+  "name": "Scrape video url from tidal",
+  "description": "Extension that scrapes tidal vidoe url",
+  "version": "0.1",
   "permissions": [
     "activeTab",
     "declarativeContent",
     "storage",
     "clipboardRead",
     "clipboardWrite",
-    "contextMenus"
+    "contextMenus",
+    "webRequest",
+    "*://*.google.com/",
+    "*://developer.chrome.com/*",
+    "*://*.video.tidal.com/*"
   ],
   "background": {
-    "page": "background.html",
-    "persistent": false
+    "scripts": ["background.js"],
+    "persistent": true
   },
   "page_action": {
     "default_popup": "popup.html",
