@@ -1,6 +1,16 @@
 var videoUrls = '';
 
+var port = chrome.runtime.connect({
+    name: "tidal-api-intercept"
+});
+
+port.postMessage({
+    type: 'video1',
+    data: videoUrls
+})
+
 chrome.storage.sync.get("tidal_video", function(obj) {
+    console.log('ssss: ', obj.tidal_video)
 	if (obj && obj.tidal_video) {
 		videoUrls = obj.tidal_video;
 	}
@@ -22,7 +32,12 @@ chrome.runtime.onInstalled.addListener(function() {
 chrome.runtime.onConnect.addListener(function(port) {
 	
 	port.onMessage.addListener(function(msg) {
-
+        chrome.storage.sync.get("tidal_video", function(obj) {
+            console.log('DF: ', obj);
+        })
+        if (msg.type && msg.type == 'video_clear') {
+            videoUrls = '';
+        }
 	});
 
 });
@@ -58,7 +73,7 @@ function coreGetApi(url) {
     const tabStorage = {};
     const networkFilters = {
         urls: [
-        	"*://developer.chrome.com/*"
+            "*://*.video.tidal.com/*"
         ]
     };
 
@@ -89,23 +104,27 @@ function coreGetApi(url) {
             requestDuration: details.timeStamp - request.startTime,
             status: 'complete'
         });
-        console.log('complete: ', request, videoUrls)
-        if (videoUrls.indexOf(request.url) !== -1) {
-        	if (videoUrls === '') {
-        		videoUrls = request.url
-        	} else {
-        		videoUrls += ',' + request.url;
-        	}
-        }
+
+        // chrome.storage.sync.set({ "tidal_video": videoUrls }, function() {
+        //     console.log('complete: ', request, videoUrls);
+        // });
         
-        chrome.storage.sync.set({ "tidal_video": videoUrls }, function() {
-		});
-        // if (
-        // 	tabStorage[tabId].requests[details.requestId].url.indexOf('master_all.m3u') > -1
-        // 	&& tabStorage[tabId].requests[details.requestId].status == "complete"
-        // ) {
-        // 	console.log(tabStorage[tabId].requests[details.requestId]);
-        // }
+        if (
+        	request.url.indexOf('master_all.m3u') > -1
+        	&& request.status == "complete"
+        ) {
+        	if (videoUrls.indexOf(request.url.split('?')[0]) == -1) {
+                if (videoUrls === '') {
+                    videoUrls = request.url
+                } else {
+                    videoUrls += ',' + request.url;
+                }
+
+                chrome.storage.sync.set({ "tidal_video": videoUrls }, function() {
+                    console.log('complete: ', request, videoUrls);
+                });
+            }
+        }
         
 
     }, networkFilters);

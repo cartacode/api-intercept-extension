@@ -1,0 +1,23 @@
+#results {
+    position: relative;
+    width: 500px;
+}
+
+.tidal-item {
+    padding: 5px 10px;
+}
+
+.tidal-item label {
+    /*width: 45px;*/
+    margin-right: 15px;
+}
+
+.tidal-item input {
+    width: 300px;
+}
+
+.clear-wrapper {
+    position: relative;
+    margin-top: 25px;
+    text-align: center;
+}
