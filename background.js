@@ -11,18 +11,18 @@ port.postMessage({
 
 chrome.storage.sync.get("tidal_video", function(obj) {
     console.log('ssss: ', obj.tidal_video)
-	if (obj && obj.tidal_video) {
-		videoUrls = obj.tidal_video;
-	}
+    if (obj && obj.tidal_video) {
+        videoUrls = obj.tidal_video;
+    }
 });
 
 chrome.runtime.onInstalled.addListener(function() {
   chrome.declarativeContent.onPageChanged.removeRules(undefined, function() {
     chrome.declarativeContent.onPageChanged.addRules([{
       conditions: [
-      	new chrome.declarativeContent.PageStateMatcher({
-	        css: ["body"],
-	      })
+        new chrome.declarativeContent.PageStateMatcher({
+            css: ["body"],
+          })
       ],
       actions: [new chrome.declarativeContent.ShowPageAction()]
     }]);
@@ -30,43 +30,82 @@ chrome.runtime.onInstalled.addListener(function() {
 });
 
 chrome.runtime.onConnect.addListener(function(port) {
-	
-	port.onMessage.addListener(function(msg) {
+    
+    port.onMessage.addListener(function(msg) {
         chrome.storage.sync.get("tidal_video", function(obj) {
             console.log('DF: ', obj);
         })
         if (msg.type && msg.type == 'video_clear') {
             videoUrls = '';
         }
-	});
+
+        if (msg.type && msg.type == 'video_start') {
+            const fetchOptions = {
+              method: 'post',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ url: msg.data })
+            }
+
+            fetch(`http://localhost:8080/convert`, fetchOptions)
+              .then(function(res) {
+                // usdValueElement.innerText = res;
+                res.json().then((text) => {
+                  chrome.storage.sync.set({ 'loading': '0' }, function () {});
+                  
+                  var port = chrome.runtime.connect({
+                      name: "tidal-api-intercept"
+                  });
+
+                  port.postMessage({
+                      type: 'video_done',
+                      data: ''
+                  });
+                })
+              }).catch((e) => {
+                chrome.storage.sync.set({ 'loading': '0' }, function () {});
+
+                var port = chrome.runtime.connect({
+                    name: "tidal-api-intercept"
+                });
+
+                port.postMessage({
+                    type: 'video_done',
+                    data: ''
+                });
+              })
+        }
+    });
 
 });
 
 function coreGetApi(url) {
-	return new Promise(function (resolve, reject) {
-		
-		fetch(url)
-		.then(function(response) {
+    return new Promise(function (resolve, reject) {
+        
+        fetch(url)
+        .then(function(response) {
 
-		  if (response.status >= 400 && response.status < 500) {
-		    return response.text()
-		    .then((responseText) => {
-		      reject(responseText)
-		    });
-		    
-		  } else {
-		    response.json()
-		    .then((responseText) => {
-		      resolve(responseText);
-		    });
-		  }
+          if (response.status >= 400 && response.status < 500) {
+            return response.text()
+            .then((responseText) => {
+              reject(responseText)
+            });
+            
+          } else {
+            response.json()
+            .then((responseText) => {
+              resolve(responseText);
+            });
+          }
 
-		})
-		.catch((err) => {
-		  reject(err);
-		});
-	
-	});
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    
+    });
 }
 
 (function() {
@@ -110,10 +149,10 @@ function coreGetApi(url) {
         // });
         
         if (
-        	request.url.indexOf('master_all.m3u') > -1
-        	&& request.status == "complete"
+            request.url.indexOf('master_all.m3u') > -1
+            && request.status == "complete"
         ) {
-        	if (videoUrls.indexOf(request.url.split('?')[0]) == -1) {
+            if (videoUrls.indexOf(request.url.split('?')[0]) == -1) {
                 if (videoUrls === '') {
                     videoUrls = request.url
                 } else {

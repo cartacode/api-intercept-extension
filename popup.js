@@ -29,15 +29,18 @@ chrome.runtime.onConnect.addListener(function(port) {
   port.onMessage.addListener(function(msg) {
     console.log('mesg: ', msg)
     if (typeof (msg) !== "string") {
-    	switch(msg.type) {
-    		case "video":
-    			// addVideoUrlToBox(msg.data);
-    			break;
+      switch(msg.type) {
+        case "video":
+          // addVideoUrlToBox(msg.data);
+          break;
 
-    		default:
-    			console.log('default case: ', msg);
-    			break;
-    	}
+        case "video_done":
+          document.getElementById('loading').style.display = 'none';
+
+        default:
+          console.log('default case: ', msg);
+          break;
+      }
     }
   });
 
@@ -101,12 +104,28 @@ chrome.storage.sync.get("tidal_video", function(obj) {
   }
 });
 
+chrome.storage.sync.get("loading", function(obj) {
+  console.log(obj.loading)
+  if (obj.loading) {
+    if (obj.loading === '0') {
+      document.getElementById('loading').style.display = 'none';
+    } else {
+      document.getElementById('loading').style.display = 'block';
+    }
+  } else {
+    document.getElementById('loading').style.display = 'none';
+  }
+});
+
 var clearButtonElement = document.getElementById('clear');
 
 clearButtonElement.onclick = function () {
-	chrome.storage.sync.set({ 'tidal_video': '' }, function () {
-		resultElement.innerHTML = "";
-	});
+  chrome.storage.sync.set({ 'tidal_video': '' }, function () {
+    resultElement.innerHTML = "";
+  });
+
+  chrome.storage.sync.set({ 'loading': '0' }, function () {});
+  document.getElementById('loading').style.display = 'none';
 
   var port = chrome.runtime.connect({
     name: "tidal-api-intercept"
@@ -115,18 +134,22 @@ clearButtonElement.onclick = function () {
   port.postMessage({
       type: 'video_clear',
       data: ''
-  })
+  });
 }
 
 var downloadAppElement = document.getElementById('downloadApp');
 
 downloadAppElement.onclick = function () {
-  var link = document.createElement("a");
+  var inputUrl = document.getSelection().toString();
+  document.getElementById('loading').style.display = 'block';
+  chrome.storage.sync.set({ 'loading': '1' }, function () {});
 
-  link.setAttribute("download", 'm3u8x');
-  link.setAttribute("target", "_blank");
-  link.setAttribute("href", 'https://sourceforge.net//projects/m3u8x/files/latest/download');
-  link.dispatchEvent(
-    new MouseEvent(`click`, { bubbles: true, cancelable: true, view: window })
-  );
+  var port = chrome.runtime.connect({
+    name: "tidal-api-intercept"
+  });
+
+  port.postMessage({
+      type: 'video_start',
+      data: inputUrl
+  });
 }
